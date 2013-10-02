@@ -14,6 +14,21 @@ public class Product implements PathBindable<Product>,
 
   private static List<Product> products;
 
+  public static class EanValidator extends Constraints.Validator<String> {
+
+    @Override
+    public boolean isValid(String value) {
+      String pattern = "^[0-9]{13}$";
+      return value != null && value.matches(pattern);
+    }
+
+    @Override
+    public F.Tuple<String, Object[]> getErrorMessageKey() {
+      return new F.Tuple<String, Object[]>("error.invalid.ean",
+          new Object[]{});
+    }
+  }
+
   static {
     products = new ArrayList<Product>();
     products.add(new Product("1111111111111", "Paperclips 1",
@@ -29,6 +44,7 @@ public class Product implements PathBindable<Product>,
   }
 
   @Constraints.Required
+  @Constraints.ValidateWith(value=EanValidator.class, message="Must be 13 numbers")
   public String ean;
   @Constraints.Required
   public String name;
@@ -40,6 +56,7 @@ public class Product implements PathBindable<Product>,
   public List<Tag> tags = new LinkedList<Tag>();
 
   public Product() {
+    // Left empty
   }
 
   public Product(String ean, String name, String description) {
