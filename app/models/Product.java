@@ -9,13 +9,39 @@ import play.mvc.QueryStringBindable;
 import java.util.*;
 import utils.*;
 
+import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.RetentionPolicy.*;
+
+import java.lang.annotation.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+
+import javax.validation.*;
+import javax.validation.metadata.*;
+
 public class Product implements PathBindable<Product>,
     QueryStringBindable<Product> {
 
   private static List<Product> products;
 
-  public static class EanValidator extends Constraints.Validator<String> {
+  @Target({FIELD})
+  @Retention(RUNTIME)
+  @Constraint(validatedBy = EanValidator.class)
+  @play.data.Form.Display(name="constraint.ean", attributes={"value"})
+  public static @interface EAN {
+      String message() default EanValidator.message;
+      Class<?>[] groups() default {};
+      Class<? extends Payload>[] payload() default {};
+  }
 
+  public static class EanValidator extends Constraints.Validator<String> implements ConstraintValidator<EAN, String> {
+    final static public String message = "error.invalid.ean";
+        
+    public EanValidator() {}
+
+    @Override
+    public void initialize(EAN constraintAnnotation) {}
+    
     @Override
     public boolean isValid(String value) {
       String pattern = "^[0-9]{13}$";
@@ -24,10 +50,11 @@ public class Product implements PathBindable<Product>,
 
     @Override
     public F.Tuple<String, Object[]> getErrorMessageKey() {
-      return new F.Tuple<String, Object[]>("error.invalid.ean",
+      return new F.Tuple<String, Object[]>(message,
           new Object[]{});
     }
   }
+
 
   static {
     products = new ArrayList<Product>();
@@ -44,7 +71,7 @@ public class Product implements PathBindable<Product>,
   }
 
   @Constraints.Required
-  @Constraints.ValidateWith(value=EanValidator.class, message="Must be 13 numbers")
+  @EAN
   public String ean;
   @Constraints.Required
   public String name;
@@ -52,6 +79,7 @@ public class Product implements PathBindable<Product>,
   public Date date = new Date();
   @DateFormat("yyyy-MM-dd")
   public Date peremptionDate = new Date();
+
   public byte[] picture;
 
 
