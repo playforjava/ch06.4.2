@@ -1,5 +1,7 @@
 package controllers;
 
+import com.google.common.io.Files;
+
 import models.Product;
 import models.Tag;
 import play.data.Form;
@@ -8,8 +10,13 @@ import play.mvc.Controller;
 import play.mvc.With;
 import views.html.products.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static play.mvc.Http.MultipartFormData;
+
 
 public class Products extends Controller {
 
@@ -34,6 +41,7 @@ public class Products extends Controller {
   }
 
   public static Result save() {
+    MultipartFormData body = request().body().asMultipartFormData();
     Form<Product> boundForm = productForm.bindFromRequest();
     if(boundForm.hasErrors()) {
       flash("error", "Please correct the form below.");
@@ -41,6 +49,17 @@ public class Products extends Controller {
     }
 
     Product product = boundForm.get();
+
+    MultipartFormData.FilePart part = body.getFile("picture");
+    if(part != null) {
+      File picture = part.getFile();
+
+      try {
+        product.picture = Files.toByteArray(picture);
+      } catch (IOException e) {
+        return internalServerError("Error reading file upload");
+      }
+    }
 
     List<Tag> tags = new ArrayList<Tag>();
     for (Tag tag : product.tags) {
@@ -55,6 +74,12 @@ public class Products extends Controller {
         String.format("Successfully added product %s", product));
 
     return redirect(routes.Products.list(1));
+  }
+
+  public static Result picture(String ean) {
+    final Product product = Product.findByEan(ean);
+    if(product == null) return notFound();
+    return ok(product.picture);
   }
 
   public static Result delete(String ean) {
